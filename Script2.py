@@ -3,7 +3,7 @@
 ##  Author : Pakshal Shahikant Jain 
 ##  Date : 09/05/2021
 ##  Program : Automated Scipt To Display Current Running Process Of Machine At Time Interval of 1 Min and Sending Log
-##            file to mentioned email adderess.
+##            file to mentioned email adderess
 ##
 ##################################################################################################################
 import os
