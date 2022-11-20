@@ -57,7 +57,7 @@ def ProcessDisplay(FolderName = "Marvellous") :
     part.add_header('Content-Disposition',"attachment; filename= %s"%filename)
 
     msg.attach(part);
-    msg.attach(MIMEText(message));
+    msg.attach(MIMEText(message))
 
     server = smtplib.SMTP_SSL('smtp.gmail.com',465)
     server.login(EMAIL_ADDRESS,EMAIL_PASSWORD)
