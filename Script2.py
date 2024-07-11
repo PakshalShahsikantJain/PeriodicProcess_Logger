@@ -36,8 +36,8 @@ def sanitize_filename(filename):
 
 def MailSender(filename,time):
     try:
-        fromaddr = "programmersden1256@gmail.com"
-        toaddr = "pakshal1256@gmail.com"
+        fromaddr = "Sender Email Address"
+        toaddr = "Recipient Email Address"
 
         msg = MIMEMultipart()
     
@@ -82,7 +82,7 @@ def MailSender(filename,time):
     
         s.starttls()
     
-        s.login(fromaddr,"ufqs abqc bbea lahw")
+        s.login(fromaddr,"Senders_Email_Password")
     
         text = msg.as_string()
     
