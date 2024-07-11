@@ -1,87 +1,170 @@
-##################################################################################################################
+###########################################################################################################################
 ##
-##  Author : Pakshal Shahikant Jain 
-##  Date : 09/05/2021
-##  Program : Automated Scipt To Display Current Running Process Of Machine At Time Interval of 1 Min and Sending Log
-##            file to mentioned email adderess
+##  Author : Pakshal Shashikant Jain
+##  Date : 21/07/2021
+##  Program : Periodic Process Logger with Auto Scheduled Log Report Facility 
 ##
-##################################################################################################################
+################################################################################################################################
 import os
 import time
 import psutil
-from sys import *
-import schedule
 import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
+import schedule
+from sys import *
+import smtplib,ssl
+import urllib.error
+import urllib.request
 from email import encoders
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+import re
 
-i = 0
+def is_connected():
+    try:
+        urllib.request.urlopen('http://www.gmail.com')
+        return True
+    except urllib.error.URLError as err:
+        return False
 
-def ProcessDisplay(FolderName = "Marvellous") :
-    Data = [] 
-    global i 
+def sanitize_filename(filename):
+    # Replace spaces with underscores
+    filename = filename.replace(' ', '_')
+    # Remove invalid characters (e.g., \ / : * ? " < > |)
+    filename = re.sub(r'[\\/:\*\?"<>|]', '_', filename)
+    return filename
 
-    if not os.path.exists(FolderName) :
-        os.mkdir(FolderName)
+def MailSender(filename,time):
+    try:
+        fromaddr = "programmersden1256@gmail.com"
+        toaddr = "pakshal1256@gmail.com"
+
+        msg = MIMEMultipart()
     
-    File_Path = os.path.join(FolderName,"Marvellous%s.txt"%i)
-    i = i + 1
-    fd = open(File_Path,"w")
+        msg['From'] = fromaddr
+    
+        msg['To'] = toaddr
+    
+        body = """
+        Hello %s,
+        Welcome to Demo World.
+        Please find attached ducument which contains Log of Running process.
+        Log file is created at : %s
+        
+        This is auto gennerated mail.
+        
+        Thanks & Regards,
+        Pakshal Shashikant Jain
+        Demo World
+            """ %(toaddr, time)
 
-    for proc in psutil.process_iter() :
-        value = proc.as_dict(attrs = ['pid','name','username'])
-        Data.append(value)
+        Subject = """
+        Demo World Process log generated at : %s
+        """%(time)
+        
+        msg['Subject'] = Subject
+    
+        msg.attach(MIMEText(body, 'plain'))
+    
+        attachment = open(filename, "rb")
+    
+        p = MIMEBase('application', 'octet-stream')
+    
+        p.set_payload((attachment).read())
+    
+        encoders.encode_base64(p)
 
-    for element in Data :
-        fd.write("%s\n"% element)
+        p.add_header('Content-Disposition', "attachment; filename= %s" % filename)
+    
+        msg.attach(p)
+    
+        s = smtplib.SMTP('smtp.gmail.com', 587)
+    
+        s.starttls()
+    
+        s.login(fromaddr,"ufqs abqc bbea lahw")
+    
+        text = msg.as_string()
+    
+        s.sendmail(fromaddr, toaddr, text)
+    
+        s.quit()
 
-    EMAIL_ADDRESS = "thechainsmokers78@gmail.com"
-    EMAIL_PASSWORD = "xmhyfrbiublwkvqy"
-    sentTo =  "pakshal1256@gmail.com"
-    subject = "Log File of Current Processes Running in System";
-    message = "This Mail Contains Report of Current Running Processes in System";
+        print("Log file successfully sent through Mail")
+            
+    except Exception as E:
+        print ("Unable to send mail.",E)
 
-    msg = MIMEMultipart()
-    msg['From'] = EMAIL_ADDRESS
-    msg['To'] = sentTo
-    msg['Subject'] = subject
-    msg['Message'] = message
+def ProcessLog(log_dir='Demo'):
+    listprocess = []
 
-    filename = os.path.basename(File_Path)
-    fd = open((File_Path),'rb')
-    part = MIMEBase('application','octet-stream')
-    part.set_payload((fd).read())
-    encoders.encode_base64(part)
-    part.add_header('Content-Disposition',"attachment; filename= %s"%filename)
+    if not os.path.exists(log_dir):
+        try:
+            os.mkdir(log_dir)
+        except:
+            pass
 
-    msg.attach(part);
-    msg.attach(MIMEText(message))
+    separator = "-" * 80;
 
-    server = smtplib.SMTP_SSL('smtp.gmail.com',465)
-    server.login(EMAIL_ADDRESS,EMAIL_PASSWORD)
-    text = msg.as_string()
-    server.sendmail(EMAIL_ADDRESS,sentTo,text)
-    server.quit()
+    filename = "DemoLog%s.log" % time.ctime()
+    FinalLogFile = sanitize_filename(filename)
 
-def main() :
-    print("--------------Marvellous Infosystems----------------------")
-    print("Script Title :" + argv[0])
+    log_path = os.path.join(log_dir,FinalLogFile);
+    f = open(log_path, 'w')
+    f.write(separator + "\n")
+    f.write("Demo World Process Logger : "+time.ctime() + "\n")
+    f.write(separator + "\n")
+    f.write("\n")
 
-    if argv[1] == '-u' or argv[1] == '-U' :
-        print("Usage : Application_Name Schedule_Time Directory_Name");
-        exit();
+    for proc in psutil.process_iter():
+        try:
+            pinfo = proc.as_dict(attrs=['pid', 'name', 'username'])
+            vms  = proc.memory_info().vms / (1024 * 1024)
+            pinfo['vms'] = vms
+            listprocess.append(pinfo)
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
 
-    if argv[1] == '-h' or argv[1] == '-H' :
-        print("Help : It is used to create log file of Running Processes");
-        exit();
+    for element in listprocess:
+      f.write("%s\n" % element)
 
-    schedule.every(int(argv[1])).minutes.do(ProcessDisplay);
+    print("Log file is successfully generated at location %s"%(log_path))
 
-    while True :
-        schedule.run_pending()
-        time.sleep(1)
+    connected = is_connected()
+    
+    if connected:
+        startTime = time.time()
+        MailSender(log_path,time.ctime())
+        endTime = time.time()
+            
+        print('Took %s seconds to send mail ' % (endTime - startTime))
+    else:
+        print("There is no internet connection")
 
-if __name__ == "__main__" :
+def main():
+    print("----Periodic Process Logger-----")
+    
+    print("Application name : " +argv[0])
+    
+    if (len(argv) == 2):
+        if (argv[1] == "-h") or (argv[1] == "-H"):
+            print("This Script is used log record of running processess")
+            exit()
+        
+        if (argv[1] == "-u") or (argv[1] == "-U"):
+            print("usage : ApplicationName AbsolutePath_of_Directory")
+            exit()
+    
+    try:
+        schedule.every(int(argv[1])).minutes.do(ProcessLog)
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+    except ValueError:
+        print("Error : Invalid datatype of input")
+    
+    except Exception as E:
+        print("Error : Invalid input",E)
+
+if __name__ == "__main__":
     main()
